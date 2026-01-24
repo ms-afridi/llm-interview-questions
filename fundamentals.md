@@ -519,3 +519,585 @@ Fine-tuned: 95% accuracy
 
 ---
 q
+
+### Q11: Explain the concept of transfer learning in LLMs.
+
+**Answer:**
+
+Transfer learning means using knowledge gained from one task to improve performance on another task. In LLMs, we pre-train once and transfer that knowledge to many downstream tasks.
+
+**The Core Idea:**
+
+Instead of training from scratch for each task, we:
+1. Pre-train on general text (learn language fundamentals)
+2. Transfer and adapt to specific tasks (fine-tuning)
+
+**Why Transfer Learning Works:**
+
+**Traditional Approach (No Transfer):**
+```
+Task 1: Email Classification
+- Train model from scratch: 1M labeled emails needed
+- Time: 2 weeks
+- Cost: $10,000
+
+Task 2: News Classification  
+- Train model from scratch: 1M labeled articles needed
+- Time: 2 weeks
+- Cost: $10,000
+
+Total: 2M labels, 4 weeks, $20,000
+```
+
+**Transfer Learning Approach:**
+```
+Pre-training (Done Once):
+- Train on 100B unlabeled words
+- Learn: grammar, facts, reasoning
+- Time: 3 months
+- Cost: $1M (but shared across all tasks)
+
+Task 1: Email Classification
+- Fine-tune: 1,000 labeled emails
+- Time: 2 hours
+- Cost: $50
+
+Task 2: News Classification
+- Fine-tune: 1,000 labeled articles
+- Time: 2 hours  
+- Cost: $50
+
+Total: 2,000 labels, 4 hours, $100 (excluding pre-training)
+```
+
+**Types of Transfer in LLMs:**
+
+1. **Feature-based Transfer:**
+   - Use pre-trained model to extract features
+   - Train separate classifier on top
+   - Example: Use BERT embeddings + logistic regression
+
+2. **Fine-tuning Transfer:**
+   - Update pre-trained weights for new task
+   - Most common in LLMs
+   - Example: Fine-tune GPT for code generation
+
+3. **Zero-shot Transfer:**
+   - No additional training
+   - Use prompting to specify task
+   - Example: ChatGPT doing any task via instructions
+
+**What Gets Transferred:**
+
+- **Lower layers:** General language patterns (syntax, grammar)
+- **Middle layers:** Semantic relationships, facts
+- **Upper layers:** Task-specific patterns (adapt during fine-tuning)
+
+**Real Example:**
+
+```
+Pre-trained Model Knowledge:
+"bank" can mean:
+1. Financial institution
+2. River bank
+3. To rely on
+4. To tilt
+
+Task 1 - Financial Sentiment:
+Fine-tune → learns "bank" mostly means financial institution
+
+Task 2 - Geography QA:
+Fine-tune → learns "bank" mostly means river bank
+
+Both benefit from the pre-trained understanding of "bank" in different contexts
+```
+
+**Interview Insight:** Transfer learning is why LLMs are so powerful. GPT-4 wasn't trained specifically for coding, translation, or creative writing - it learned general language and transferred that knowledge to these tasks.
+
+---
+
+## Tokenization & Context
+
+### Q12: What is tokenization? Why do we need it?
+
+**Answer:**
+
+Tokenization is the process of breaking down text into smaller units (tokens) that the model can process. Think of it as converting a sentence into a sequence of building blocks.
+
+**Why We Need Tokenization:**
+
+Neural networks work with numbers, not text. Tokenization bridges the gap:
+```
+Text → Tokens → Numbers (Token IDs) → Model Processing
+```
+
+**Types of Tokenization:**
+
+**1. Word-level Tokenization:**
+```
+Text: "I love AI"
+Tokens: ["I", "love", "AI"]
+Problem: Vocabulary becomes huge (millions of words)
+Unknown words: "ChatGPT" → [UNK] (lost information)
+```
+
+**2. Character-level Tokenization:**
+```
+Text: "AI"
+Tokens: ["A", "I"]
+Pros: Small vocabulary (~100 characters)
+Cons: Long sequences, loses word meaning
+```
+
+**3. Subword Tokenization (Most Common in LLMs):**
+
+**BPE (Byte Pair Encoding) - Used in GPT:**
+```
+Text: "unhappiness"
+Tokens: ["un", "happiness"] or ["un", "happy", "ness"]
+
+Vocabulary: ~50,000 tokens
+Balances: vocabulary size + sequence length
+```
+
+**WordPiece - Used in BERT:**
+```
+Text: "playing"
+Tokens: ["play", "##ing"]
+(## indicates subword continuation)
+```
+
+**SentencePiece - Used in T5, LLaMA:**
+```
+Treats text as raw Unicode
+Doesn't require pre-tokenization (no spaces needed)
+Works for all languages including Chinese, Japanese
+```
+
+**Real Example with GPT Tokenizer:**
+
+```python
+Text: "ChatGPT is amazing!"
+
+Tokens: ["Chat", "G", "PT", " is", " amazing", "!"]
+Token IDs: [24268, 38, 11571, 318, 4998, 0]
+
+Why split this way?
+- "ChatGPT" is rare → split into known pieces
+- " is" includes the space (important for reconstruction)
+- Common words like "amazing" stay together
+```
+
+**Key Properties of Good Tokenization:**
+
+1. **Balanced vocabulary:** Not too big (memory), not too small (sequence length)
+2. **Handles unknown words:** Through subword splitting
+3. **Preserves meaning:** "unhappy" vs ["un", "happy"]
+4. **Efficient:** Shorter sequences = faster processing
+
+**Special Tokens:**
+```
+[CLS]  - Classification token (BERT)
+[SEP]  - Separator between sentences
+[PAD]  - Padding token
+[MASK] - Masked token for training
+<|endoftext|> - End of document (GPT)
+```
+
+**Interview Gotcha:**
+
+*Q: Why does ChatGPT struggle with "How many R's in strawberry"?*
+
+*A:* Tokenization! "strawberry" might be tokenized as ["straw", "berry"], so the model never sees it as a single unit of letters. It processes tokens, not characters.
+
+**Practical Impact:**
+```
+Text length: 100 words
+Character tokens: ~500 tokens
+Word tokens: ~100 tokens  
+Subword tokens: ~150 tokens ✓ (best balance)
+```
+
+---
+
+### Q13: What is a context window? What are its limitations?
+
+**Answer:**
+
+The context window is the maximum number of tokens a model can process at once. Think of it as the model's "working memory."
+
+**How It Works:**
+
+```
+Context Window = Input tokens + Output tokens
+
+GPT-3.5: 4,096 tokens (~3,000 words)
+GPT-4: 8,192 tokens (standard), 32,768 tokens (extended)
+Claude 3: 200,000 tokens (~150,000 words)
+Gemini 1.5: 1,000,000 tokens (~700,000 words)
+```
+
+**Real Example:**
+
+```
+Context window: 4,096 tokens
+
+Input: 3,500 tokens (long document)
+Available for output: 596 tokens
+→ Response must be under 596 tokens or model will cut off
+```
+
+**Key Limitations:**
+
+**1. Information Loss (Beyond Window):**
+```
+Document: 10,000 tokens
+Context window: 4,096 tokens
+
+Problem: Can only process first 4,096 tokens
+Solution: Chunking, summarization, or bigger model
+```
+
+**2. Computational Cost:**
+
+Attention complexity: O(n²) where n = sequence length
+```
+2K context:  2,000² = 4M operations
+4K context:  4,000² = 16M operations (4x cost)
+8K context:  8,000² = 64M operations (16x cost!)
+```
+
+Doubling context = 4x memory and compute!
+
+**3. Lost in the Middle:**
+
+Models struggle with information in the middle of long contexts
+```
+Performance by position:
+Beginning: 90% recall
+Middle: 60% recall ← Weak spot!
+End: 85% recall
+```
+
+**4. Cost Implications:**
+```
+API pricing often based on tokens:
+
+Input: 3,000 tokens × $0.03/1K = $0.09
+Output: 500 tokens × $0.06/1K = $0.03
+Total: $0.12 per query
+
+With 10K context window: Costs 3x more!
+```
+
+**Strategies to Handle Context Limitations:**
+
+**1. Chunking + Retrieval:**
+```python
+# Instead of putting entire document in context
+1. Split document into chunks
+2. Embed and store chunks
+3. Retrieve only relevant chunks
+4. Put only relevant parts in context (RAG approach)
+```
+
+**2. Summarization Chain:**
+```
+Long document (50K tokens)
+→ Summarize in chunks (5K tokens each)
+→ Combine summaries (2K tokens)
+→ Final processing
+```
+
+**3. Sliding Window:**
+```
+Document: [Chunk1][Chunk2][Chunk3][Chunk4]
+
+Process:
+Step 1: [Chunk1][Chunk2] → Summary1
+Step 2: [Summary1][Chunk3] → Summary2
+Step 3: [Summary2][Chunk4] → Final
+```
+
+**4. Prompt Compression:**
+```
+Instead of:
+"Please analyze the following customer review and tell me the sentiment, main issues mentioned, and suggested improvements: [long review]"
+
+Use:
+"Analyze sentiment, issues, improvements: [review]"
+
+Saved: ~15 tokens
+```
+
+**Real Interview Scenario:**
+
+*Q: "How would you build a chatbot that needs to remember a long conversation history?"*
+
+*Good Answer:*
+"I'd implement a conversation memory system:
+1. Store full history in database
+2. Summarize older messages (keep recent ones detailed)
+3. Use embedding-based retrieval to fetch relevant past context
+4. Stay within context window by keeping: recent messages + relevant history + system prompt
+5. Monitor token usage and implement sliding window if needed"
+
+**Modern Solutions:**
+
+- **Sparse Attention:** Process only important parts (not full n²)
+- **Linear Attention:** Approximations that reduce complexity
+- **Retrieval Augmentation:** Don't put everything in context
+- **Flash Attention:** Optimized attention computation
+
+**Key Insight:** Context window is a hard constraint. You must design around it, not hope your data fits!
+
+---
+
+### Q14: Explain the concept of embeddings in LLMs.
+
+**Answer:**
+
+Embeddings are dense vector representations of text that capture semantic meaning in a continuous space. Think of them as coordinates in a multi-dimensional space where similar meanings are close together.
+
+**Simple Analogy:**
+
+Words are like cities on a map. Embeddings give each word coordinates so we can measure distances and relationships.
+
+**How Embeddings Work:**
+
+```
+Word → Vector of numbers
+
+"king"   → [0.2, 0.5, 0.1, 0.8, ...]  (768 dimensions)
+"queen"  → [0.3, 0.6, 0.1, 0.7, ...]
+"man"    → [0.1, 0.2, 0.5, 0.3, ...]
+"woman"  → [0.2, 0.3, 0.6, 0.4, ...]
+
+Relationship captured:
+king - man + woman ≈ queen
+```
+
+**Types of Embeddings:**
+
+**1. Token Embeddings (Learned during training):**
+```
+Vocabulary size: 50,000 words
+Embedding dimension: 768
+
+Embedding Matrix: 50,000 × 768
+Each token → one row of this matrix
+```
+
+**2. Contextual Embeddings (From LLMs like BERT, GPT):**
+
+The same word gets different embeddings based on context!
+
+```
+Sentence 1: "The bank is closed"
+"bank" → [0.2, 0.5, ..., 0.8] (financial)
+
+Sentence 2: "The river bank is muddy"  
+"bank" → [0.7, 0.1, ..., 0.3] (geographical)
+
+Same word, different meanings, different embeddings!
+```
+
+**3. Sentence Embeddings:**
+```
+Entire sentence → single vector
+
+"I love AI" → [0.1, 0.3, 0.8, ..., 0.2] (768-dim)
+
+Used for:
+- Semantic search
+- Similarity comparison
+- Classification
+```
+
+**Properties of Good Embeddings:**
+
+**1. Semantic Similarity:**
+```
+Cosine similarity measures closeness:
+
+"happy" vs "joyful":   0.85 (very similar)
+"happy" vs "sad":      0.15 (opposite)
+"happy" vs "banana":   0.05 (unrelated)
+```
+
+**2. Analogies Captured:**
+```
+Paris - France + Germany ≈ Berlin
+King - Man + Woman ≈ Queen
+Walking - Walk + Swim ≈ Swimming
+```
+
+**3. Clustering:**
+```
+Similar concepts cluster together:
+
+Animals: [dog, cat, bird, fish] → close in space
+Emotions: [happy, sad, angry, excited] → close in space
+Animals vs Emotions: far apart in space
+```
+
+**Practical Example - Semantic Search:**
+
+```python
+Query: "machine learning models"
+Query Embedding: [0.2, 0.5, ..., 0.7]
+
+Documents:
+1. "AI and neural networks" → [0.3, 0.5, ..., 0.6] → Similarity: 0.92
+2. "Deep learning algorithms" → [0.25, 0.48, ..., 0.65] → Similarity: 0.89
+3. "Cooking recipes" → [0.8, 0.1, ..., 0.2] → Similarity: 0.12
+
+Rank: Doc 1 > Doc 2 >> Doc 3
+```
+
+**How LLMs Use Embeddings:**
+
+```
+Input Text: "Hello world"
+
+Step 1: Tokenize → ["Hello", "world"]
+Step 2: Token IDs → [15496, 995]
+Step 3: Lookup Embeddings → [[0.2, 0.5, ...], [0.7, 0.1, ...]]
+Step 4: Add Positional Encoding
+Step 5: Process through transformer layers
+```
+
+**Interview Insight:** Embeddings compress discrete tokens into continuous space where math operations (similarity, distance) become meaningful. This is why LLMs can understand that "car" and "automobile" are similar even though they're completely different strings!
+
+---
+
+### Q15: What are model parameters? How do they affect model performance?
+
+**Answer:**
+
+Model parameters are the learned weights in the neural network that get adjusted during training. They're the "knowledge" stored in the model.
+
+**Simple Analogy:** 
+Think of parameters like the connections in your brain. More connections = more capacity to learn, but also more energy needed.
+
+**What Counts as a Parameter:**
+
+```
+In a Transformer:
+1. Embedding weights: Vocabulary × Embedding dimension
+2. Attention weights: Q, K, V matrices in each layer
+3. Feed-forward network weights
+4. Layer normalization parameters
+
+Example - GPT-3:
+- 175 billion parameters
+- 96 layers
+- 96 attention heads per layer
+- 12,288 dimensional embeddings
+```
+
+**Parameter Count Examples:**
+
+```
+Small Models:
+- BERT-Base: 110M parameters
+- GPT-2 Small: 117M parameters
+- DistilBERT: 66M parameters
+
+Medium Models:
+- GPT-2 Large: 774M parameters
+- BERT-Large: 340M parameters
+
+Large Models:
+- GPT-3: 175B parameters
+- LLaMA-2 70B: 70B parameters
+- GPT-4: ~1.7T parameters (estimated)
+```
+
+**How Parameters Affect Performance:**
+
+**1. Learning Capacity:**
+```
+More parameters = Can learn more complex patterns
+
+10M params: Simple classification
+100M params: Good language understanding
+1B params: Strong reasoning, multi-task
+100B+ params: Emergent abilities (math, coding, complex reasoning)
+```
+
+**2. Memory Requirements:**
+```
+Storage (FP32 - 32 bit floats):
+1B parameters × 4 bytes = 4GB
+
+7B model: ~28GB
+13B model: ~52GB
+70B model: ~280GB
+
+FP16 (half precision): Divide by 2
+INT8 (quantized): Divide by 4
+```
+
+**3. Inference Speed:**
+```
+More parameters = Slower inference
+
+7B model: ~50 tokens/second
+13B model: ~25 tokens/second
+70B model: ~5 tokens/second
+
+(On same hardware)
+```
+
+**4. Training Cost:**
+```
+GPT-3 (175B):
+- Training cost: ~$5-12 million
+- Training time: ~34 days on 1024 A100 GPUs
+- Data: 300B tokens
+
+Smaller model (1B):
+- Training cost: ~$10,000
+- Training time: Few days on 8 GPUs
+- Same data efficiency
+```
+
+**The Scaling Law:**
+
+Performance improves predictably with parameters:
+```
+Loss ∝ N^(-0.076)
+
+Where N = number of parameters
+
+Key insight: 10x more parameters ≈ ~15% better performance
+```
+
+**Practical Trade-offs:**
+
+```
+Use Case          Model Size    Reasoning
+Mobile App        <1B          Must run on device
+API Service       7-13B        Balance cost/quality
+Research          70B+         Need best performance
+Production        13-30B       Sweet spot for most apps
+```
+
+**Interview Question:**
+
+*Q: "Why not always use the biggest model?"*
+
+*Good Answer:*
+"Bigger isn't always better for production:
+1. **Cost:** 70B model costs 10x more to run than 7B
+2. **Latency:** Users need fast responses (<2 seconds)
+3. **Diminishing returns:** 70B might be only 5% better than 13B for specific tasks
+4. **Fine-tuning:** Smaller models can be fine-tuned to match larger models on narrow tasks
+5. **Infrastructure:** Not everyone has GPU clusters
+
+The right choice depends on your accuracy requirements, budget, and latency constraints."
+
+**Key Insight:** Parameters are like raw intelligence - important but not everything. A well-trained 7B model with good data can outperform a poorly-trained 70B model!
+
+---
